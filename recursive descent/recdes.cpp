@@ -12,11 +12,12 @@ char* TakeTask (FILE* task)
     return buffer;
 }
 
-int GetG (const char* buf, int* answer)
+int GetG (const char* buf, Node* head)
 {
     uint32_t pos = 0;
 
-    *answer = GetE (buf, &pos);
+    bool flag_ncE = 0;
+    GetE (buf, &pos, head, &flag_ncE);
 
     if (buf[pos] == '$')
     {
@@ -31,106 +32,178 @@ int GetG (const char* buf, int* answer)
 #undef CUR_S
 #define CUR_S buf[*pos]
 
-int GetE (const char* buf, uint32_t* pos)
+int GetE (const char* buf, uint32_t* pos, Node* node, bool* flag_ncE)
 {
-    int val = GetT (buf, pos);
-    //printf ("%c", CUR_S);//db
-    while (1)
-    {
-        if (CUR_S == '+')
-        {
-            *pos += 1;
-            val += GetT (buf, pos);
-            continue;
-        }
-        if (CUR_S == '-')
-        {
-            *pos += 1;
-            val -= GetT (buf, pos);
-            continue;
-        }
-        else
-        {
-            break;
-        }
-    }
-    //printf ("cur val = %d\n", val);//db
-    return val;
-}
+    NodeInsert (node, {NOT_A_TYPE, 0}, LEFT_N);
+    bool flag_ncT = 0;
+    GetT (buf, pos, LNODE, &flag_ncT);
 
-int GetT (const char* buf, uint32_t* pos)
-{
-    int val = GetP (buf, pos);
-    //printf ("%c\n", CUR_S);//db
-    while (1)
+    if (CUR_S == '+')
     {
-        if (CUR_S == '*')
-        {
-            *pos += 1;
-            val *= GetP (buf, pos);
-            continue;
-        }
-        if (CUR_S == '/')
-        {
-            *pos += 1;
-            val /= GetP (buf, pos);
-            continue;
-        }
-        else
-        {
-            break;
-        }
+        *pos += 1;
+
+        TYPE = BIN_OPERATOR;
+        DATA.c  = '+';
+
+        NodeInsert (node, {NOT_A_TYPE, 0}, RIGHT_N);
+        GetE (buf,  pos, RNODE, flag_ncE);
+
+        return 0;
+    }
+    if (CUR_S == '-')
+    {
+        *pos += 1;
+        
+        TYPE = BIN_OPERATOR;
+        DATA.c  = ((*flag_ncE) ? '+' : '-');
+        *flag_ncE = 1;
+
+        NodeInsert (node, {NOT_A_TYPE, 0}, RIGHT_N);
+        GetE (buf,  pos, RNODE, flag_ncE);
+
+        return 0;
     }
 
-    return val;
-}
-
-int GetP (const char* buf, uint32_t* pos)
-{
-    int val = 0;
+    *node = *(LNODE);
     
+    return 0;
+}
+
+int GetT (const char* buf, uint32_t* pos, Node* node, bool* flag_ncT)
+{
+    NodeInsert (node, {NOT_A_TYPE, 0}, LEFT_N);
+    GetP (buf, pos, LNODE);
+
+    if (CUR_S == '*')
+    {
+        *pos += 1;
+
+        TYPE = BIN_OPERATOR;
+        DATA.c  = '*';
+
+        NodeInsert (node, {NOT_A_TYPE, 0}, RIGHT_N);
+        GetT (buf,  pos, RNODE, flag_ncT);
+
+        return 0;
+    }
+    if (CUR_S == '/')
+    {
+        *pos += 1;
+
+        TYPE = BIN_OPERATOR;
+        DATA.c  = ((*flag_ncT) ? '*' : '/');
+        *flag_ncT = 1;
+
+        NodeInsert (node, {NOT_A_TYPE, 0}, RIGHT_N);
+        GetT (buf,  pos, RNODE, flag_ncT);
+
+        return 0;
+    }
+
+    *node = *(LNODE);
+
+    return 0;
+}
+
+int GetP (const char* buf, uint32_t* pos, Node* node)
+{
     if (CUR_S == '(')
     {
         *pos += 1;
-        val = GetE (buf, pos);
+        bool flag_ncE = 0;
+        GetE (buf, pos, node, &flag_ncE);
 
         if (CUR_S == ')')
         {
             *pos += 1;
-            return val;
+            return 0;
         }
         else 
         {
             printf ("lexical error in func %s with cur_s %c\n", __func__, CUR_S);
-            return 0;
+            return 1;
         }
     }
     else 
     {
-        val = GetN (buf, pos);
-        return val;
+        GetU (buf, pos, node);
+        return 0;
     }
 }
 
-int GetN (const char* buf, uint32_t* pos)
+int GetU (const char* buf, uint32_t* pos, Node* node)
 {
-    uint32_t prev_pos = *pos;
-    int val = 0;
-
-    while ('0' <= CUR_S && CUR_S <= '9')
+    if ('0' <= CUR_S && CUR_S <= '9')
     {
-        val += 10*val + (CUR_S - '0');
-        *pos += 1;  
+        GetN (buf, pos, node);
+        return 0;
+    }
+
+    if (strncmp(buf + *pos, "sin", 3) == 0)
+    {
+        DATA.c = 's';
+        TYPE = UNO_OPERATOR;
+        *pos += 3;
+        NodeInsert (node, {NOT_A_TYPE, 0}, LEFT_N);
+        GetP (buf, pos, LNODE);
+        return 0;
+    }
+    if (strncmp(buf + *pos, "cos", 3) == 0)
+    {
+        DATA.c = 'c';
+        TYPE = UNO_OPERATOR;
+        *pos += 3;
+        NodeInsert (node, {NOT_A_TYPE, 0}, LEFT_N);
+        GetP (buf, pos, LNODE);
+        return 0;
+    }
+
+    if ('a' <= CUR_S && CUR_S <= 'z')
+    {
+        GetV (buf, pos, node);
+        return 0;
     }
     
+    printf ("lexical error in func %s with cur_s = %c\n", __func__, CUR_S);
+    return 1;
+}
+
+int GetV (const char* buf, uint32_t* pos, Node* node)
+{
+    if ('a' <= CUR_S && CUR_S <= 'z')
+    {
+        sscanf(buf + *pos, "%c", &DATA.c);
+        TYPE = VARIABLE;
+        //printf ("%c\n", DATA.c);//db
+        *pos += 1;
+        return 0;
+    }
+    else
+    {
+        printf ("lexical error in func %s with cur_s = %c\n", __func__, CUR_S);
+        return 1;
+    }
+}
+
+int GetN (const char* buf, uint32_t* pos, Node* node)
+{
+    uint32_t prev_pos = *pos;
+
+    while ('0' <= CUR_S && CUR_S <= '9' || CUR_S == '.')
+    {
+        *pos += 1;  
+    }
+
     if (*pos - prev_pos)
     {
-        return val;
+        sscanf (buf + prev_pos, "%lf", &DATA.r);
+        TYPE = REAL_NUM;
+        return 0;
     }
     else 
     {
-        printf ("lexical error in func %s\n", __func__);
-        return 0;
+        printf ("lexical error in func %s with cur_s = %c\n", __func__, CUR_S);
+        return 1;
     }
 }
 

@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <sys\stat.h>
+#include "tree.h"
 
 enum LexicalCheck
 {
@@ -12,14 +13,18 @@ enum LexicalCheck
 
 char*           TakeTask            (FILE* task);
 
-int             GetG                (const char* buf, int* answer);
+int             GetG                (const char* buf, Node* head);
 
-int             GetE                (const char* buf, uint32_t* pos);
+int             GetE                (const char* buf, uint32_t* pos, Node* node, bool* flag_ncE);
 
-int             GetT                (const char* buf, uint32_t* pos);
+int             GetT                (const char* buf, uint32_t* pos, Node* node, bool* flag_ncT);
 
-int             GetP                (const char* buf, uint32_t* pos);
+int             GetP                (const char* buf, uint32_t* pos, Node* node);
 
-int             GetN                (const char* buf, uint32_t* pos);
+int             GetU                (const char* buf, uint32_t* pos, Node* node);
+
+int             GetV                (const char* buf, uint32_t* pos, Node* node);
+
+int             GetN                (const char* buf, uint32_t* pos, Node* node);
 
 #endif

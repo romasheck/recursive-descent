@@ -6,8 +6,11 @@ int main ()
     char* buffer = TakeTask (task);
     fclose (task);
 
-    int answer;
-    bool incorrect = GetG (buffer, &answer);
+    Tree aboba;
+    Tree* tree = &aboba;
+    TreeCtor (tree);
+    
+    bool incorrect = GetG (buffer, THEAD);
 
     //printf ("%s", buffer);
 
@@ -17,8 +20,11 @@ int main ()
     }
     else
     {
-        printf ("answer is %d\n", answer);
+        TreeDump (tree);
+        printf ("all is ok\n");
     }
+
+    TreeDtor (tree);
 
     free (buffer);
 
